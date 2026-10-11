@@ -3717,6 +3717,8 @@ var qrcode = function() {
     }
     wall.addEventListener('click', function(e){
       var b = e.target.closest('.wn-del'); if (!b || !db) return;
+      var card = b.closest('.wn'), who = card && card.querySelector('b') ? card.querySelector('b').textContent : '';
+      if (!confirm('Xoá lời chúc của ' + who + '?')) return;
       b.disabled = true; b.textContent = '…';
       api.deleteDoc(api.doc(db, WISH_COL, b.getAttribute('data-id'))).catch(function(err){ b.disabled = false; b.textContent = '×'; alert('Xoá chưa được: ' + (err && err.message || err)); });
     });
