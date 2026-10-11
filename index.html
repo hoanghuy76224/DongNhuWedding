@@ -575,6 +575,31 @@ body{background:radial-gradient(130% 70% at 50% 0%,#fdf1e6 0%,rgba(253,241,230,0
   .leg:nth-of-type(odd) .stamp{right:-14px;left:auto}
 }
 
+
+/* ===== admin overlay ===== */
+.admin-root{display:none;position:fixed;inset:0;z-index:100;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#f8ece2;color:var(--ink)}
+.admin-root.on{display:block}
+body.adm-on #sky{display:none}
+.adm-wrap{max-width:760px;margin:0 auto;padding:28px 16px 80px}
+.adm-gate{max-width:340px;margin:12vh auto 0;text-align:center;background:var(--paper);border-radius:14px;padding:26px 20px;box-shadow:0 14px 24px -14px rgba(60,10,20,.35)}
+.adm-gate h2,.adm-top h2{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px}
+.adm-gate p{font-size:14px;margin:4px 0 16px;opacity:.8}
+.adm-gate input{width:100%;font:16px Lora,serif;padding:11px 12px;border-radius:10px;border:1px solid rgba(185,135,122,.6);background:#fffaf3;color:var(--ink)}
+.adm-gate button,.adm-top button{margin-top:12px;font:600 14px Lora,serif;padding:10px 22px;border-radius:99px;border:0;background:var(--wine);color:#f6e6d2;cursor:pointer}
+.adm-top button{margin:0;background:rgba(122,30,46,.1);color:var(--ink)}
+.adm-err{color:#b4283f;font-size:13px;margin-top:8px;min-height:1em}
+.adm-app{display:none}
+.adm-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.adm-top span{font-size:13px;letter-spacing:.1em;color:var(--ink2)}
+.adm-row{display:flex;gap:12px;align-items:flex-start;background:var(--paper);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 0 0 1px rgba(185,135,122,.3)}
+.adm-t{flex:1;min-width:0}
+.adm-t b{font-size:15px}
+.adm-t small{margin-left:8px;font-size:12px;opacity:.65}
+.adm-t p{margin-top:4px;font-size:14.5px;line-height:1.55;font-weight:400;word-wrap:break-word}
+.adm-del{flex:none;font:600 13px Lora,serif;padding:8px 14px;border-radius:8px;border:1px solid #b4283f;background:#fff;color:#b4283f;cursor:pointer}
+.adm-del:disabled{opacity:.5}
+.adm-empty{text-align:center;padding:24px;opacity:.75;font-style:italic}
+
 /* animation bits */
 .trail-path{stroke-dasharray:3 4}
 .fly{animation:dash 30s linear infinite}
@@ -1133,6 +1158,23 @@ body{background:radial-gradient(130% 70% at 50% 0%,#fdf1e6 0%,rgba(253,241,230,0
     <div class="sd">25 · 10 · 2026</div>
   </footer>
 </main>
+
+<!-- ===== ADMIN (mở bằng #admin ở cuối link) ===== -->
+<div class="admin-root" id="adminRoot">
+  <div class="adm-wrap">
+    <div class="adm-gate" id="admGate">
+      <h2>Trang quản trị</h2>
+      <p>Sổ lời chúc · Quỳnh Như &amp; Duy Đông</p>
+      <input type="password" id="admPw" placeholder="Nhập mật khẩu" autocomplete="off">
+      <button type="button" id="admPwBtn">Vào</button>
+      <div class="adm-err" id="admErr"></div>
+    </div>
+    <div class="adm-app" id="admApp">
+      <div class="adm-top"><div><h2>Lời chúc</h2><span id="admCount"></span></div><button type="button" id="admOut">Thoát</button></div>
+      <div id="admList"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 //---------------------------------------------------------------------
@@ -3678,7 +3720,7 @@ var qrcode = function() {
   /* wishes: Firestore when configured, otherwise local preview only */
   var FIREBASE_CONFIG = {apiKey:"AIzaSyDKojhw5-SFWukGSN_oSjw5vxJngrfIogo",authDomain:"vo-iu-dino-848d2.firebaseapp.com",projectId:"vo-iu-dino-848d2",storageBucket:"vo-iu-dino-848d2.firebasestorage.app",messagingSenderId:"879023470388",appId:"1:879023470388:web:ecc9128f6f280b26249761"}, WISH_COL = 'rsvp_dongnhu';
   (function(){
-    var form = document.getElementById('wishForm'), wall = document.getElementById('wishWall'), note = document.getElementById('wishNote'), db = null, api = null;
+    var form = document.getElementById('wishForm'), wall = document.getElementById('wishWall'), note = document.getElementById('wishNote'), db = null, api = null, ALLW = [];
     document.querySelectorAll('#chips button').forEach(function(c){ c.addEventListener('click', function(){ form.msg.value = c.textContent; form.msg.focus(); }); });
     function esc(s){ return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
     function card(w){ return '<article class="wn"><p>' + esc(w.msg) + '</p><b>' + esc(w.name) + '</b></article>'; }
@@ -3687,7 +3729,7 @@ var qrcode = function() {
     if (FIREBASE_CONFIG){
       Promise.all([import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'), import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js')]).then(function(m){
         var app = m[0].initializeApp(FIREBASE_CONFIG); api = m[1]; db = api.getFirestore(app);
-        api.onSnapshot(api.query(api.collection(db, WISH_COL), api.orderBy('createdAt','desc'), api.limit(80)), function(s){ render(s.docs.map(function(d){ var x = d.data(); return {name: x.guestName || '', msg: x.wish || ''}; }).filter(function(w){ return w.msg; })); });
+        api.onSnapshot(api.query(api.collection(db, WISH_COL), api.orderBy('createdAt','desc'), api.limit(500)), function(s){ ALLW = s.docs.map(function(d){ var x = d.data(); return {id: d.id, name: x.guestName || '', msg: x.wish || '', ts: x.createdAt && x.createdAt.toDate ? x.createdAt.toDate() : null}; }).filter(function(w){ return w.msg; }); render(ALLW.slice(0,80)); adminRender(); }, function(err){ adminErr(err); });
       }).catch(function(){});
     }
     form.addEventListener('submit', function(e){
@@ -3699,6 +3741,41 @@ var qrcode = function() {
       if (db){ api.addDoc(api.collection(db, WISH_COL), {guestName:w.name, wish:w.msg, createdAt: api.serverTimestamp()}).then(done, function(){ btn.disabled = false; note.textContent = 'Gửi chưa được, bạn thử lại nhé.'; }); }
       else { local.unshift(w); render(local); done(); }
     });
+
+    /* ===== admin: open the invitation link with #admin at the end ===== */
+    var ADMIN_PASSWORD = 'dongnhu2026';   /* đổi mật khẩu admin ở đây */
+    var adm = document.getElementById('adminRoot'), gate = document.getElementById('admGate'), app2 = document.getElementById('admApp'), list = document.getElementById('admList'), cnt = document.getElementById('admCount');
+    function isAdm(){ return location.hash.toLowerCase() === '#admin'; }
+    function ok(){ try { return sessionStorage.getItem('dn_admin') === '1'; } catch(e){ return false; } }
+    function route(){
+      if (!isAdm()){ adm.classList.remove('on'); document.body.classList.remove('adm-on'); return; }
+      adm.classList.add('on'); document.body.classList.add('adm-on');
+      document.getElementById('intro').style.display = 'none'; document.body.classList.remove('locked');
+      if (ok()){ gate.style.display = 'none'; app2.style.display = 'block'; adminRender(); } else { gate.style.display = 'block'; app2.style.display = 'none'; }
+    }
+    function login(){
+      if (document.getElementById('admPw').value === ADMIN_PASSWORD){ try { sessionStorage.setItem('dn_admin','1'); } catch(e){} route(); }
+      else document.getElementById('admErr').textContent = 'Mật khẩu chưa đúng.';
+    }
+    document.getElementById('admPwBtn').addEventListener('click', login);
+    document.getElementById('admPw').addEventListener('keydown', function(e){ if (e.key === 'Enter') login(); });
+    document.getElementById('admOut').addEventListener('click', function(){ try { sessionStorage.removeItem('dn_admin'); } catch(e){} location.hash = ''; });
+    function fmt(d){ if (!d) return ''; var z = function(n){ return (n < 10 ? '0' : '') + n; }; return z(d.getHours()) + ':' + z(d.getMinutes()) + ' · ' + z(d.getDate()) + '/' + z(d.getMonth()+1) + '/' + d.getFullYear(); }
+    function adminErr(err){ if (list) list.innerHTML = '<div class="adm-empty">Lỗi tải dữ liệu: ' + esc(err && err.message || err) + '</div>'; }
+    function adminRender(){
+      if (!adm.classList.contains('on') || !ok()) return;
+      if (!db){ list.innerHTML = '<div class="adm-empty">Đang kết nối Firebase…</div>'; cnt.textContent = ''; return; }
+      cnt.textContent = ALLW.length + ' lời chúc';
+      list.innerHTML = ALLW.length ? ALLW.map(function(w){ return '<div class="adm-row"><div class="adm-t"><b>' + esc(w.name) + '</b><small>' + fmt(w.ts) + '</small><p>' + esc(w.msg) + '</p></div><button type="button" class="adm-del" data-id="' + esc(w.id) + '">Xoá</button></div>'; }).join('') : '<div class="adm-empty">Chưa có lời chúc nào.</div>';
+    }
+    list.addEventListener('click', function(e){
+      var b = e.target.closest('.adm-del'); if (!b || !db) return;
+      var w = ALLW.filter(function(x){ return x.id === b.getAttribute('data-id'); })[0];
+      if (!confirm('Xoá lời chúc của ' + (w ? w.name : '') + '?')) return;
+      b.disabled = true; b.textContent = 'Đang xoá…';
+      api.deleteDoc(api.doc(db, WISH_COL, b.getAttribute('data-id'))).catch(function(err){ b.disabled = false; b.textContent = 'Xoá'; alert('Xoá chưa được: ' + (err && err.message || err)); });
+    });
+    window.addEventListener('hashchange', route); route();
   })();
 
   /* reveal tickets on scroll (after the passport opens) */
