@@ -3676,7 +3676,7 @@ var qrcode = function() {
   })();
 
   /* wishes: Firestore when configured, otherwise local preview only */
-  var FIREBASE_CONFIG = null;
+  var FIREBASE_CONFIG = {apiKey:"AIzaSyDKojhw5-SFWukGSN_oSjw5vxJngrfIogo",authDomain:"vo-iu-dino-848d2.firebaseapp.com",projectId:"vo-iu-dino-848d2",storageBucket:"vo-iu-dino-848d2.firebasestorage.app",messagingSenderId:"879023470388",appId:"1:879023470388:web:ecc9128f6f280b26249761"}, WISH_COL = 'rsvp_dongnhu';
   (function(){
     var form = document.getElementById('wishForm'), wall = document.getElementById('wishWall'), note = document.getElementById('wishNote'), db = null, api = null;
     document.querySelectorAll('#chips button').forEach(function(c){ c.addEventListener('click', function(){ form.msg.value = c.textContent; form.msg.focus(); }); });
@@ -3687,7 +3687,7 @@ var qrcode = function() {
     if (FIREBASE_CONFIG){
       Promise.all([import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'), import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js')]).then(function(m){
         var app = m[0].initializeApp(FIREBASE_CONFIG); api = m[1]; db = api.getFirestore(app);
-        api.onSnapshot(api.query(api.collection(db, 'wishes'), api.orderBy('createdAt','desc'), api.limit(60)), function(s){ render(s.docs.map(function(d){ return d.data(); })); });
+        api.onSnapshot(api.query(api.collection(db, WISH_COL), api.orderBy('createdAt','desc'), api.limit(80)), function(s){ render(s.docs.map(function(d){ var x = d.data(); return {name: x.guestName || '', msg: x.wish || ''}; }).filter(function(w){ return w.msg; })); });
       }).catch(function(){});
     }
     form.addEventListener('submit', function(e){
@@ -3696,7 +3696,7 @@ var qrcode = function() {
       if (!w.name || !w.msg) return;
       var btn = form.querySelector('.send'); btn.disabled = true;
       var done = function(){ form.msg.value = ''; btn.disabled = false; note.textContent = 'Cảm ơn bạn! Lời chúc đã cất cánh ✈'; btn.classList.add('flown'); setTimeout(function(){ note.textContent = ''; btn.classList.remove('flown'); }, 2600); };
-      if (db){ api.addDoc(api.collection(db, 'wishes'), {name:w.name, msg:w.msg, createdAt: api.serverTimestamp()}).then(done, function(){ btn.disabled = false; note.textContent = 'Gửi chưa được, bạn thử lại nhé.'; }); }
+      if (db){ api.addDoc(api.collection(db, WISH_COL), {guestName:w.name, wish:w.msg, createdAt: api.serverTimestamp()}).then(done, function(){ btn.disabled = false; note.textContent = 'Gửi chưa được, bạn thử lại nhé.'; }); }
       else { local.unshift(w); render(local); done(); }
     });
   })();
