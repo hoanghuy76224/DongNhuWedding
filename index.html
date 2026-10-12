@@ -3561,8 +3561,8 @@ var qrcode = function() {
   flight();
 
   /* directions + calendar */
-  var place = 'Thôn Lộc Ninh, Hưng Phú, Hưng Yên';
-  document.querySelectorAll('[data-map]').forEach(function(a){ a.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place); });
+  var MAP_URL = 'https://maps.app.goo.gl/HwmeYSekvYi5spgc7';
+  document.querySelectorAll('[data-map]').forEach(function(a){ a.href = MAP_URL; });
   var EV = {
     vuquy: {t:'Lễ vu quy Quỳnh Như & Duy Đông', s:'20261025T110000Z', e:'20261025T120000Z'},
     tiec:  {t:'Bữa cơm thân mật · Quỳnh Như & Duy Đông', s:'20261025T090000Z', e:'20261025T150000Z'}
